@@ -1,5 +1,5 @@
 import numpy as np
-from model import Model
+from model import LstmModel, LstmDropoutModel, HybridModel
 from preprocess import get_data
 
 def train(model, train_input, train_labels):
