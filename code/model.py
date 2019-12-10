@@ -2,16 +2,17 @@ import tensorflow as tf
 import numpy as np
 
 class LstmModel(tf.keras.Model):
-    def __init__(self, vocab_size):
+    def __init__(self, vocab_size, num_labels, embedding_size=40, learning_rate=0.01, rnn_size=256):
 
         super(LstmModel, self).__init__()
 
-        self.learning_rate = 0.01
+        self.learning_rate = learning_rate
         self.vocab_size = vocab_size
-        self.window_size = 20
-        self.embedding_size = 40
+        self.num_labels = num_labels
+        self.window_size = 30
+        self.embedding_size = embedding_size
         self.batch_size = 64
-        self.rnn_size = 256
+        self.rnn_size = rnn_size
 
         self.embedding = tf.keras.layers.Embedding(
             self.vocab_size,
@@ -23,15 +24,15 @@ class LstmModel(tf.keras.Model):
             return_state=True
         )
         self.dense = tf.keras.layers.Dense(
-            self.vocab_size,
+            self.num_labels,
             activation='softmax'
         )
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
 
-    def call(self, inputs, initial_state=None, training=False):
+    def call(self, inputs, initial_state=None):
         """
         Performs a forward pass on given `inputs` and `initial_state`.
-        
+
         :param inputs: word ids of shape (batch_size, window_size)
         :param initial_state: 2-d array of shape (batch_size, rnn_size) as a tensor
         :param training: boolean representing if call is during training
@@ -39,14 +40,15 @@ class LstmModel(tf.keras.Model):
         """
         x = self.embedding(inputs)
         x, _, _ = self.lstm(x, initial_state=initial_state)
+        x = tf.reshape(x, [x.shape[0], self.window_size*self.rnn_size])
         x = self.dense(x)
         return x
 
     def loss(self, probs, labels):
         """
         Calculates average cross entropy sequence to sequence loss of the prediction
-        
-        :param probs: a matrix of shape (batch_size, window_size, vocab_size) as a tensor
+
+        :param probs: a matrix of shape (batch_size, window_size, num_labels) as a tensor
         :param labels: matrix of shape (batch_size, window_size) containing the labels
         :return: the loss of the model as a tensor of size 1
         """
@@ -88,7 +90,7 @@ class LstmDropoutModel(tf.keras.Model):
     def call(self, inputs, initial_state=None, training=False):
         """
         Performs a forward pass on given `inputs` and `initial_state`.
-        
+
         :param inputs: word ids of shape (batch_size, window_size)
         :param initial_state: 2-d array of shape (batch_size, rnn_size) as a tensor
         :param training: boolean representing if call is during training
@@ -103,7 +105,7 @@ class LstmDropoutModel(tf.keras.Model):
     def loss(self, probs, labels):
         """
         Calculates average cross entropy sequence to sequence loss of the prediction
-        
+
         :param probs: a matrix of shape (batch_size, window_size, vocab_size) as a tensor
         :param labels: matrix of shape (batch_size, window_size) containing the labels
         :return: the loss of the model as a tensor of size 1
@@ -155,7 +157,7 @@ class HybridModel(tf.keras.Model):
     def call(self, inputs, initial_state=None, training=False):
         """
         Performs a forward pass on given `inputs` and `initial_state`.
-        
+
         :param inputs: word ids of shape (batch_size, window_size)
         :param initial_state: 2-d array of shape (batch_size, rnn_size) as a tensor
         :param training: boolean representing if call is during training
@@ -171,7 +173,7 @@ class HybridModel(tf.keras.Model):
     def loss(self, probs, labels):
         """
         Calculates average cross entropy sequence to sequence loss of the prediction
-        
+
         :param probs: a matrix of shape (batch_size, window_size, vocab_size) as a tensor
         :param labels: matrix of shape (batch_size, window_size) containing the labels
         :return: the loss of the model as a tensor of size 1
