@@ -42,6 +42,7 @@ def get_data(train_file, validation_file, test_file):
 
     # TODO: load and concatenate training data from training file.
     labeldict = {"true": 5, "mostly-true": 4, "half-true": 3, "barely-true": 2, "false": 1, "pants-fire": 0}
+    # labeldict = {"true": 1, "mostly-true": 1, "half-true": 1, "barely-true": 1, "false": 0, "pants-fire": 0}
     vocab = []
     train = []
     train_labels = []
@@ -92,7 +93,7 @@ def get_data(train_file, validation_file, test_file):
     val_i = []
     test_i = []
 
-    print(dictionary['*PAD*'])
+    # print(dictionary['*PAD*'])
     for statement in train:
         n_state = []
         for word in statement:

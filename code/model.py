@@ -136,6 +136,7 @@ class HybridModel(tf.keras.Model):
             self.vocab_size,
             self.embedding_size
         )
+        # self.dropout = tf.keras.layers.Dropout(0.2)
         self.conv = tf.keras.layers.Conv1D(
             self.embedding_size, # dimension of output
             5, # size of kernel
@@ -167,6 +168,7 @@ class HybridModel(tf.keras.Model):
         :return: the batch element probabilities as a tensor, the final_state(s) of the rnn
         """
         x = self.embedding(inputs)
+        # x = self.dropout(x)
         x = self.conv(x)
         x = self.max_pool(x)
         x, _, _ = self.lstm(x, initial_state=initial_state)

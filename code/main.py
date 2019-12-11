@@ -5,7 +5,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from keras.callbacks import EarlyStopping
 from keras.wrappers.scikit_learn import KerasClassifier
 import tensorflow as tf
-from random import shuffle
+from random import shuffle, randint
 
 def train(model, train_input, train_labels):
     """
@@ -98,13 +98,13 @@ def tune_hyperparameters(vocab_size, num_labels, train_input, train_labels, vali
 def main():
     train_input, train_labels, val_input, val_labels, test_input, test_labels, dictionary, labels = get_data('../data/train.tsv', '../data/valid.tsv', '../data/test.tsv')
     #tune_hyperparameters(len(dictionary), len(labels), train_input, train_labels, test_input, test_labels)
-    lmodel = LstmModel(len(dictionary), len(labels))
+    lmodel = LstmModel(len(dictionary), len(set(labels.values())))
     train(lmodel, train_input, train_labels)
 
-    dmodel = LstmDropoutModel(len(dictionary), len(labels))
+    dmodel = LstmDropoutModel(len(dictionary), len(set(labels.values())))
     train(dmodel, train_input, train_labels)
 
-    hmodel = HybridModel(len(dictionary), len(labels))
+    hmodel = HybridModel(len(dictionary), len(set(labels.values())))
     train(hmodel, train_input, train_labels)
 
     lval = test(lmodel, val_input, val_labels)
@@ -121,6 +121,22 @@ def main():
     print("HYBRID VALIDATION ACCURACY: {}".format(hval))
     haccuracy = test(hmodel, test_input, test_labels)
     print("HYBRID TEST ACCURACY: {}".format(haccuracy))
+
+    print('----------BENCHMARKS----------')
+    val_predictions = [randint(0, len(set(labels.values()))-1) for _ in range(len(val_labels))]
+    test_predictions = [randint(0, len(set(labels.values()))-1) for _ in range(len(test_labels))]
+    print("RANDOM VALIDATION ACCURACY: {}".format(len([x for x,y in zip(val_labels,val_predictions) if x == y])/len(val_labels)))
+    print("RANDOM TEST ACCURACY: {}".format(len([x for x,y in zip(test_labels,test_predictions) if x == y])/len(test_labels)))
+
+    val_label_counts = []
+    test_label_counts = []
+    for label in sorted(list(set(labels.values()))):
+        val_label_counts.append(len([x for x in val_labels if x == label]))
+        test_label_counts.append(len([x for x in test_labels if x == label]))
+    val_maj_label = np.argmax(val_label_counts)
+    test_maj_label = np.argmax(test_label_counts)
+    print("MAJORITY VALIDATION ACCURACY: {}".format(len([x for x in val_labels if x == val_maj_label])/len(val_labels)))
+    print("MAJORITY TEST ACCURACY: {}".format(len([x for x in test_labels if x == test_maj_label])/len(test_labels)))
 
 if __name__ == '__main__':
     main()
