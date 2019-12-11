@@ -5,6 +5,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from keras.callbacks import EarlyStopping
 from keras.wrappers.scikit_learn import KerasClassifier
 import tensorflow as tf
+from random import shuffle
 
 def train(model, train_input, train_labels):
     """
@@ -68,44 +69,6 @@ def tune_hyperparameters(vocab_size, num_labels, train_input, train_labels, vali
     :param train_labels: train labels (all labels for training) of shape (num_labels,)
     :returns: None
     """
-    """
-    es = EarlyStopping(monitor = 'val_loss', min_delta = 0.05, patience = 5)
-
-    callback = [es]
-
-    # Tune the embedding size, learning rate, and RNN size
-    fit_params = {
-        'callbacks': callback,
-        'epochs': 20,
-        'batch_size': 64,
-        'validation_data': (validation_input, validation_labels),
-        'verbose': 0
-    }
-
-    embedding_size_opts = [20, 40, 80, 160, 240]
-    lr_opts = [0.1, 0.01, 0.05, 0.001, 0.005, 0.0001]
-    rnn_size_opts = [128, 256, 512]
-
-    params_options = {
-        'embedding_size': embedding_size_opts,
-        'learning_rate': lr_opts,
-        'rnn_size': rnn_size_opts
-    }
-
-    rs = RandomizedSearchCV(
-        model,
-        param_distributions = params_options,
-        fit_params = fit_params,
-        scoring = 'accuracy',
-        cv = 3,
-        verbose = 1
-    )
-
-    print(train_labels)
-    print(len(train_labels))
-    rs.fit(train_input, train_labels)
-    """
-
     embedding_size_opts = [20, 40, 80, 160, 240]
     lr_opts = [0.1, 0.01, 0.05, 0.001, 0.005, 0.0001]
     rnn_size_opts = [128, 256, 512]
@@ -116,7 +79,9 @@ def tune_hyperparameters(vocab_size, num_labels, train_input, train_labels, vali
     for eopt in embedding_size_opts:
         for lopt in lr_opts:
             for ropt in rnn_size_opts:
-                print("Training {}, {}, {}".format(eopt, lopt, ropt))
+                print("Training with {}, {}, {}".format(eopt, lopt, ropt))
+                # CHANGE TO BE THE MODEL THAT YOU WANT
+                # Model also needs to be altered to take in values for hyperparams
                 model = LstmModel(vocab_size, num_labels, eopt, lopt, ropt)
                 for i in range(10):
                     train(model, train_input, train_labels)
@@ -131,17 +96,31 @@ def tune_hyperparameters(vocab_size, num_labels, train_input, train_labels, vali
     print("Best score: {}".format(highest_acc))
 
 def main():
-    # Currently loads up the validation file, but can change it to load the test file
-    # I tried both and they had the same issue
-    train_input, train_labels, test_input, test_labels, dictionary, labels = get_data('../data/train.tsv', '../data/valid.tsv')
-    #print("THIS MODEL IS CURRENTLY IN HYPERPARAMETER TUNING MODE")
+    train_input, train_labels, val_input, val_labels, test_input, test_labels, dictionary, labels = get_data('../data/train.tsv', '../data/valid.tsv', '../data/test.tsv')
     #tune_hyperparameters(len(dictionary), len(labels), train_input, train_labels, test_input, test_labels)
-    model = LstmModel(len(dictionary), len(labels), 40, 0.001, 256)
-    for i in range(20):
-        loss = train(model, train_input, train_labels)
-        print("AVG LOSS: {}".format(loss))
-        accuracy = test(model, test_input, test_labels)
-        print("ACCURACY: {}".format(accuracy))
+    lmodel = LstmModel(len(dictionary), len(labels))
+    train(lmodel, train_input, train_labels)
+
+    dmodel = LstmDropoutModel(len(dictionary), len(labels))
+    train(dmodel, train_input, train_labels)
+
+    hmodel = HybridModel(len(dictionary), len(labels))
+    train(hmodel, train_input, train_labels)
+
+    lval = test(lmodel, val_input, val_labels)
+    print("LSTM VALIDATION ACCURACY: {}".format(lval))
+    laccuracy = test(lmodel, test_input, test_labels)
+    print("LSTM TEST ACCURACY: {}".format(laccuracy))
+
+    dval = test(dmodel, val_input, val_labels)
+    print("LSTMDROPOUT VALIDATION ACCURACY: {}".format(dval))
+    daccuracy = test(dmodel, test_input, test_labels)
+    print("LSTMDROPOUT TEST ACCURACY: {}".format(daccuracy))
+
+    hval = test(hmodel, val_input, val_labels)
+    print("HYBRID VALIDATION ACCURACY: {}".format(hval))
+    haccuracy = test(hmodel, test_input, test_labels)
+    print("HYBRID TEST ACCURACY: {}".format(haccuracy))
 
 if __name__ == '__main__':
     main()

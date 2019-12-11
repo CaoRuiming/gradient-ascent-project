@@ -2,17 +2,17 @@ import tensorflow as tf
 import numpy as np
 
 class LstmModel(tf.keras.Model):
-    def __init__(self, vocab_size, num_labels, embedding_size=40, learning_rate=0.01, rnn_size=256):
+    def __init__(self, vocab_size, num_labels):
 
         super(LstmModel, self).__init__()
 
-        self.learning_rate = learning_rate
+        self.learning_rate = 0.001
         self.vocab_size = vocab_size
         self.num_labels = num_labels
         self.window_size = 30
-        self.embedding_size = embedding_size
+        self.embedding_size = 160
         self.batch_size = 64
-        self.rnn_size = rnn_size
+        self.rnn_size = 128
 
         self.embedding = tf.keras.layers.Embedding(
             self.vocab_size,
@@ -60,14 +60,15 @@ class LstmModel(tf.keras.Model):
         )
 
 class LstmDropoutModel(tf.keras.Model):
-    def __init__(self, vocab_size):
+    def __init__(self, vocab_size, num_labels):
 
         super(LstmDropoutModel, self).__init__()
 
-        self.learning_rate = 0.01
+        self.learning_rate = 0.001
         self.vocab_size = vocab_size
-        self.window_size = 20
-        self.embedding_size = 40
+        self.num_labels = num_labels
+        self.window_size = 30
+        self.embedding_size = 160
         self.batch_size = 64
         self.rnn_size = 256
 
@@ -82,7 +83,7 @@ class LstmDropoutModel(tf.keras.Model):
             return_state=True
         )
         self.dense = tf.keras.layers.Dense(
-            self.vocab_size,
+            self.num_labels,
             activation='softmax'
         )
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
@@ -99,6 +100,7 @@ class LstmDropoutModel(tf.keras.Model):
         x = self.embedding(inputs)
         x = self.dropout(x, training)
         x, _, _ = self.lstm(x, initial_state=initial_state)
+        x = tf.reshape(x, [x.shape[0], self.window_size*self.rnn_size])
         x = self.dense(x)
         return x
 
@@ -118,14 +120,15 @@ class LstmDropoutModel(tf.keras.Model):
         )
 
 class HybridModel(tf.keras.Model):
-    def __init__(self, vocab_size):
+    def __init__(self, vocab_size, num_labels):
 
         super(HybridModel, self).__init__()
 
-        self.learning_rate = 0.01
+        self.learning_rate = 0.001
         self.vocab_size = vocab_size
-        self.window_size = 20
-        self.embedding_size = 40
+        self.num_labels = num_labels
+        self.window_size = 30
+        self.embedding_size = 240
         self.batch_size = 64
         self.rnn_size = 256
 
@@ -149,7 +152,7 @@ class HybridModel(tf.keras.Model):
             return_state=True
         )
         self.dense = tf.keras.layers.Dense(
-            self.vocab_size,
+            self.num_labels,
             activation='softmax'
         )
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
@@ -167,6 +170,7 @@ class HybridModel(tf.keras.Model):
         x = self.conv(x)
         x = self.max_pool(x)
         x, _, _ = self.lstm(x, initial_state=initial_state)
+        x = tf.reshape(x, [x.shape[0], x.shape[1]*x.shape[2]])
         x = self.dense(x)
         return x
 

@@ -29,7 +29,7 @@ def pad_corpus(sents):
 
     return padded_sentences
 
-def get_data(train_file, test_file):
+def get_data(train_file, validation_file, test_file):
     """
     Read and parse the train and test file line by line, then tokenize the sentences to build the train and test data separately.
     Create a vocabulary dictionary that maps all the unique tokens from your train and test data as keys to a unique integer value.
@@ -54,6 +54,20 @@ def get_data(train_file, test_file):
             vocab += text.split()
             train_labels.append(labeldict[l[1]])
         f.close()
+
+    val = []
+    val_labels = []
+    # TODO: load and concatenate validation data from validation file.
+    with open(validation_file, 'r') as f:
+        for line in f:
+            l = line.split('\t')
+            text = l[2].replace('-', ' ')
+            text = text.translate(str.maketrans('', '', string.punctuation)).lower()
+            val.append(text.split())
+            vocab += text.split()
+            val_labels.append(labeldict[l[1]])
+        f.close()
+
     test = []
     test_labels = []
     # TODO: load and concatenate testing data from testing file.
@@ -71,40 +85,28 @@ def get_data(train_file, test_file):
     vocab = set(vocab)
     dictionary = {w: i for i, w in enumerate(list(vocab))}
     train = pad_corpus(train)
+    val = pad_corpus(val)
     test = pad_corpus(test)
 
     train_i = []
+    val_i = []
     test_i = []
 
+    print(dictionary['*PAD*'])
     for statement in train:
         n_state = []
         for word in statement:
             n_state.append(dictionary[word])
         train_i.append(n_state)
+    for statement in val:
+        n_state = []
+        for word in statement:
+            n_state.append(dictionary[word])
+        val_i.append(n_state)
     for statement in test:
         n_state = []
         for word in statement:
             n_state.append(dictionary[word])
         test_i.append(n_state)
 
-    # TODO: read in and tokenize training data
-
-    # TODO: read in and tokenize testing data
-
-    # TODO: return tuple of training tokens, testing tokens, and the vocab dictionary.
-    # print(dictionary)
-    # print(train_labels)
-    # print(train_i)
-    # print(dictionary["*PAD*"])
-    # print(dictionary["*STOP*"])
-    # print(test_labels)
-    # print(test_i)
-    # print(test)
-
-    return (train_i, train_labels, test_i, test_labels, dictionary, labeldict)
-
-def main():
-    get_data('train.tsv','test.tsv')
-
-if __name__ == '__main__':
-    main()
+    return (train_i, train_labels, val_i, val_labels, test_i, test_labels, dictionary, labeldict)

@@ -8,6 +8,8 @@ Group members:
 
 This project is a reimplementation of the work in [*Fake News Identification on Twitter with Hybrid CNN and RNN Models*](https://arxiv.org/pdf/1806.11316.pdf) (2018).
 
+In order to run this code, go to https://github.com/thiagorainmaker77/liar_dataset to download the LIAR dataset and put these into a folder labeled 'data'.
+
 ## Environment Setup
 
 This project requires Python 3.6 or newer.
