@@ -1,11 +1,11 @@
 import numpy as np
 from model import LstmModel, LstmDropoutModel, HybridModel
-from preprocess import get_data
+from preprocess import get_data, PAD_TOKEN, STOP_TOKEN
 from sklearn.model_selection import RandomizedSearchCV
 from keras.callbacks import EarlyStopping
 from keras.wrappers.scikit_learn import KerasClassifier
 import tensorflow as tf
-from random import shuffle, randint
+from random import shuffle, randint, sample
 
 def train(model, train_input, train_labels):
     """
@@ -71,7 +71,7 @@ def tune_hyperparameters(vocab_size, num_labels, train_input, train_labels, vali
     """
     embedding_size_opts = [20, 40, 80, 160, 240]
     lr_opts = [0.1, 0.01, 0.05, 0.001, 0.005, 0.0001]
-    rnn_size_opts = [128, 256, 512]
+    rnn_size_opts = [64, 128, 256, 512]
 
     best = None
     highest_acc = 0
@@ -82,7 +82,7 @@ def tune_hyperparameters(vocab_size, num_labels, train_input, train_labels, vali
                 print("Training with {}, {}, {}".format(eopt, lopt, ropt))
                 # CHANGE TO BE THE MODEL THAT YOU WANT
                 # Model also needs to be altered to take in values for hyperparams
-                model = LstmModel(vocab_size, num_labels, eopt, lopt, ropt)
+                model = HybridModel(vocab_size, num_labels, eopt, lopt, ropt)
                 for i in range(10):
                     train(model, train_input, train_labels)
                 accuracy = test(model, validation_input, validation_labels)
@@ -97,7 +97,8 @@ def tune_hyperparameters(vocab_size, num_labels, train_input, train_labels, vali
 
 def main():
     train_input, train_labels, val_input, val_labels, test_input, test_labels, dictionary, labels = get_data('../data/train.tsv', '../data/valid.tsv', '../data/test.tsv')
-    #tune_hyperparameters(len(dictionary), len(labels), train_input, train_labels, test_input, test_labels)
+    # tune_hyperparameters(len(dictionary), len(labels), train_input, train_labels, test_input, test_labels)
+    # return
     lmodel = LstmModel(len(dictionary), len(set(labels.values())))
     train(lmodel, train_input, train_labels)
 
@@ -137,6 +138,21 @@ def main():
     test_maj_label = np.argmax(test_label_counts)
     print("MAJORITY VALIDATION ACCURACY: {}".format(len([x for x in val_labels if x == val_maj_label])/len(val_labels)))
     print("MAJORITY TEST ACCURACY: {}".format(len([x for x in test_labels if x == test_maj_label])/len(test_labels)))
+
+    print('----------HYBRID MODEL RESULTS----------')
+    reverse_dictionary = {v:k for k,v in dictionary.items()}
+    reverse_labels = {v:k for k,v in labels.items()}
+    examples = list(sample(range(len(test_input)), k=10))
+    for index in examples:
+        sentence = [reverse_dictionary[word_id] for word_id in test_input[index]]
+        sentence = [word for word in sentence if word != STOP_TOKEN]
+        sentence = [word for word in sentence if word != PAD_TOKEN]
+        prbs = hmodel.call(tf.convert_to_tensor(test_input), initial_state=None)
+        guesses = tf.math.argmax(prbs, axis=1).numpy()
+        print('Sentence:', ' '.join(sentence))
+        print('True Label:', reverse_labels[test_labels[index]])
+        print('Predicted Label:', reverse_labels[guesses[index]])
+        print('----------')
 
 if __name__ == '__main__':
     main()

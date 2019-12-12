@@ -120,17 +120,17 @@ class LstmDropoutModel(tf.keras.Model):
         )
 
 class HybridModel(tf.keras.Model):
-    def __init__(self, vocab_size, num_labels):
+    def __init__(self, vocab_size, num_labels, embedding_size=240, learning_rate=0.001, rnn_size=256):
 
         super(HybridModel, self).__init__()
 
-        self.learning_rate = 0.001
+        self.learning_rate = learning_rate
         self.vocab_size = vocab_size
         self.num_labels = num_labels
         self.window_size = 30
-        self.embedding_size = 240
+        self.embedding_size = embedding_size
         self.batch_size = 64
-        self.rnn_size = 256
+        self.rnn_size = rnn_size
 
         self.embedding = tf.keras.layers.Embedding(
             self.vocab_size,
