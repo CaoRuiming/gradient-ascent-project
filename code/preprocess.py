@@ -29,7 +29,7 @@ def pad_corpus(sents):
 
     return padded_sentences
 
-def get_data(train_file, validation_file, test_file):
+def get_data(train_file, validation_file, test_file, test_sentence=None):
     """
     Read and parse the train and test file line by line, then tokenize the sentences to build the train and test data separately.
     Create a vocabulary dictionary that maps all the unique tokens from your train and test data as keys to a unique integer value.
@@ -42,7 +42,6 @@ def get_data(train_file, validation_file, test_file):
 
     # TODO: load and concatenate training data from training file.
     labeldict = {"true": 5, "mostly-true": 4, "half-true": 3, "barely-true": 2, "false": 1, "pants-fire": 0}
-    # labeldict = {"true": 1, "mostly-true": 1, "half-true": 1, "barely-true": 1, "false": 0, "pants-fire": 0}
     vocab = []
     train = []
     train_labels = []
@@ -93,7 +92,6 @@ def get_data(train_file, validation_file, test_file):
     val_i = []
     test_i = []
 
-    # print(dictionary['*PAD*'])
     for statement in train:
         n_state = []
         for word in statement:
@@ -109,5 +107,16 @@ def get_data(train_file, validation_file, test_file):
         for word in statement:
             n_state.append(dictionary[word])
         test_i.append(n_state)
+    
+    # process test sentence
+    encoded_test_sentence = None
+    if test_sentence != None:
+        text = test_sentence.translate(str.maketrans('', '', string.punctuation)).lower()
+        text = text.split()
+        for word in text:
+            if word not in dictionary:
+                dictionary[word] = len(dictionary)
+        encoded_test_sentence = pad_corpus([text])[0]
+        encoded_test_sentence = [dictionary[word] for word in encoded_test_sentence]
 
-    return (train_i, train_labels, val_i, val_labels, test_i, test_labels, dictionary, labeldict)
+    return (train_i, train_labels, val_i, val_labels, test_i, test_labels, dictionary, labeldict, encoded_test_sentence)
