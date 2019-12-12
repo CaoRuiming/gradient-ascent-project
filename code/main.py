@@ -4,8 +4,11 @@ from preprocess import get_data, PAD_TOKEN, STOP_TOKEN
 from sklearn.model_selection import RandomizedSearchCV
 from keras.callbacks import EarlyStopping
 from keras.wrappers.scikit_learn import KerasClassifier
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from random import shuffle, randint, sample
+from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser(description='GAP')
@@ -33,7 +36,9 @@ def train(model, train_input, train_labels):
     b_size = model.batch_size * model.window_size
     total_loss = 0.0
 
-    for batch in range(batches):
+    progress = tqdm(range(batches))
+    progress.set_description('Training ' + str(type(model).__name__))
+    for batch in progress:
         with tf.GradientTape() as tape:
             inputs = train_input[batch*model.batch_size:(batch+1)*model.batch_size]
             prbs = model.call(tf.convert_to_tensor(inputs), initial_state=None)
@@ -115,54 +120,58 @@ def main():
     train_input, train_labels, val_input, val_labels, test_input, test_labels, dictionary, labels, encoded_test_sentence = get_data(args.train_file, args.val_file, args.test_file, args.test_sentence)
     # tune_hyperparameters(len(dictionary), len(labels), train_input, train_labels, test_input, test_labels)
     # return
-    lmodel = LstmModel(len(dictionary), len(set(labels.values())))
-    train(lmodel, train_input, train_labels)
 
-    dmodel = LstmDropoutModel(len(dictionary), len(set(labels.values())))
-    train(dmodel, train_input, train_labels)
+    if args.test_sentence == None:
+        lmodel = LstmModel(len(dictionary), len(set(labels.values())))
+        train(lmodel, train_input, train_labels)
+
+        dmodel = LstmDropoutModel(len(dictionary), len(set(labels.values())))
+        train(dmodel, train_input, train_labels)
 
     hmodel = HybridModel(len(dictionary), len(set(labels.values())))
     train(hmodel, train_input, train_labels)
 
-    lval, _ = test(lmodel, val_input, val_labels)
-    print("LSTM VALIDATION ACCURACY: {}".format(lval))
-    laccuracy, lmse = test(lmodel, test_input, test_labels)
-    print("LSTM TEST ACCURACY: {}".format(laccuracy))
-    print("LSTM TEST MSE: {}".format(lmse))
+    if args.test_sentence == None:
+        lval, _ = test(lmodel, val_input, val_labels)
+        print("LSTM VALIDATION ACCURACY: {}".format(lval))
+        laccuracy, lmse = test(lmodel, test_input, test_labels)
+        print("LSTM TEST ACCURACY: {}".format(laccuracy))
+        print("LSTM TEST MSE: {}".format(lmse))
+        print('----------')
 
-    dval, _ = test(dmodel, val_input, val_labels)
-    print("LSTMDROPOUT VALIDATION ACCURACY: {}".format(dval))
-    daccuracy, dmse = test(dmodel, test_input, test_labels)
-    print("LSTMDROPOUT TEST ACCURACY: {}".format(daccuracy))
-    print("LSTMDROPOUT TEST MSE: {}".format(dmse))
+        dval, _ = test(dmodel, val_input, val_labels)
+        print("LSTMDROPOUT VALIDATION ACCURACY: {}".format(dval))
+        daccuracy, dmse = test(dmodel, test_input, test_labels)
+        print("LSTMDROPOUT TEST ACCURACY: {}".format(daccuracy))
+        print("LSTMDROPOUT TEST MSE: {}".format(dmse))
+        print('----------')
 
-    hval, _ = test(hmodel, val_input, val_labels)
-    print("HYBRID VALIDATION ACCURACY: {}".format(hval))
-    haccuracy, hmse = test(hmodel, test_input, test_labels)
-    print("HYBRID TEST ACCURACY: {}".format(haccuracy))
-    print("HYBRID TEST MSE: {}".format(hmse))
+        hval, _ = test(hmodel, val_input, val_labels)
+        print("HYBRID VALIDATION ACCURACY: {}".format(hval))
+        haccuracy, hmse = test(hmodel, test_input, test_labels)
+        print("HYBRID TEST ACCURACY: {}".format(haccuracy))
+        print("HYBRID TEST MSE: {}".format(hmse))
 
-    print('----------BENCHMARKS----------')
-    rand_val_predictions = [randint(0, len(set(labels.values()))-1) for _ in range(len(val_labels))]
-    rand_test_predictions = [randint(0, len(set(labels.values()))-1) for _ in range(len(test_labels))]
-    print("RANDOM VALIDATION ACCURACY: {}".format(len([x for x,y in zip(val_labels,rand_val_predictions) if x == y])/len(val_labels)))
-    print("RANDOM TEST ACCURACY: {}".format(len([x for x,y in zip(test_labels,rand_test_predictions) if x == y])/len(test_labels)))
-    print("RANDOM TEST MSE: {}".format(np.sum(np.square(np.subtract(rand_test_predictions, test_labels)))/len(test_labels)))
+        print('----------BENCHMARKS----------')
+        rand_val_predictions = [randint(0, len(set(labels.values()))-1) for _ in range(len(val_labels))]
+        rand_test_predictions = [randint(0, len(set(labels.values()))-1) for _ in range(len(test_labels))]
+        print("RANDOM VALIDATION ACCURACY: {}".format(len([x for x,y in zip(val_labels,rand_val_predictions) if x == y])/len(val_labels)))
+        print("RANDOM TEST ACCURACY: {}".format(len([x for x,y in zip(test_labels,rand_test_predictions) if x == y])/len(test_labels)))
+        print("RANDOM TEST MSE: {}".format(np.sum(np.square(np.subtract(rand_test_predictions, test_labels)))/len(test_labels)))
+        print('----------')
 
-    val_label_counts = []
-    test_label_counts = []
-    for label in sorted(list(set(labels.values()))):
-        val_label_counts.append(len([x for x in val_labels if x == label]))
-        test_label_counts.append(len([x for x in test_labels if x == label]))
-    val_maj_label = np.argmax(val_label_counts)
-    test_maj_label = np.argmax(test_label_counts)
-    maj_val_predictions = [val_maj_label] * len(test_labels)
-    maj_test_predictions = [test_maj_label] * len(test_labels)
-    # print("MAJORITY VALIDATION ACCURACY: {}".format(len([x for x in val_labels if x == val_maj_label])/len(val_labels)))
-    # print("MAJORITY TEST ACCURACY: {}".format(len([x for x in test_labels if x == test_maj_label])/len(test_labels)))
-    print("MAJORITY VALIDATION ACCURACY: {}".format(len([x for x,y in zip(val_labels,maj_val_predictions) if x == y])/len(val_labels)))
-    print("MAJORITY TEST ACCURACY: {}".format(len([x for x,y in zip(test_labels,maj_test_predictions) if x == y])/len(test_labels)))
-    print("MAJORITY TEST MSE: {}".format(np.sum(np.square(np.subtract(maj_test_predictions, test_labels)))/len(test_labels)))
+        val_label_counts = []
+        test_label_counts = []
+        for label in sorted(list(set(labels.values()))):
+            val_label_counts.append(len([x for x in val_labels if x == label]))
+            test_label_counts.append(len([x for x in test_labels if x == label]))
+        val_maj_label = np.argmax(val_label_counts)
+        test_maj_label = np.argmax(test_label_counts)
+        maj_val_predictions = [val_maj_label] * len(test_labels)
+        maj_test_predictions = [test_maj_label] * len(test_labels)
+        print("MAJORITY VALIDATION ACCURACY: {}".format(len([x for x,y in zip(val_labels,maj_val_predictions) if x == y])/len(val_labels)))
+        print("MAJORITY TEST ACCURACY: {}".format(len([x for x,y in zip(test_labels,maj_test_predictions) if x == y])/len(test_labels)))
+        print("MAJORITY TEST MSE: {}".format(np.sum(np.square(np.subtract(maj_test_predictions, test_labels)))/len(test_labels)))
 
     print('----------HYBRID MODEL RESULTS----------')
     reverse_dictionary = {v:k for k,v in dictionary.items()}
