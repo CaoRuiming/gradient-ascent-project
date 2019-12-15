@@ -28,3 +28,21 @@ Finally, to activate the virtualenv, run
 ```bash
 source venv/bin/activate
 ```
+
+## Running the Models
+This project contains three models:
+- LSTM: a standard model conaining an LSTM
+- LSTM with Dropbout: a model similar to the LSTM model, but with a dropout layer added
+- Hybrid: a model containing an LSTM component and a 1D CNN with maxpooling
+
+To run any code, navigate to the `code` directory.
+
+To train and see test result for all three models from the paper, run:
+```bash
+python main.py
+```
+
+To input a custom sentence for the hybrid model to analyze, run:
+```bash
+python main.py --test-sentence "This is test sentence"
+```
